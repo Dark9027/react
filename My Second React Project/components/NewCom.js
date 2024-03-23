@@ -1,95 +1,88 @@
 import React, { Component } from "react";
 import NewsItem from "./NewsItem";
 import Loading from "./Loading";
+import PropTypes from 'prop-types'
+import InfiniteScroll from "react-infinite-scroll-component";
 
 class NewCom extends Component {
-    constructor(){
-        super();
-        this.state={
-            article:null,
-            loading:false,
-            page:1
-        }
+  constructor(){
+    super();
+    this.state={
+        article:[],
+        page:1,
+        totalResults:0,
+        loading:true
     }
+    }
+    
+
+    static defaultProps={
+      country:'in',
+      page_size:15,
+      category:'general'
+    }
+
+    static  propTypes ={
+      country:PropTypes.string,
+      page_size:PropTypes.number
+    }
+
     async componentDidMount(){
-      this.setState({loading : true}) 
-      let url=`https://newsapi.org/v2/top-headlines?country=${this.props.country}&apiKey=b6ad3649af274729b4c7e2a2308183c6&page=1&pagesize=${this.props.page_size}`
+      this.props.setState(10);
+      let url=`https://newsapi.org/v2/top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=${this.props.apiKey}&page=1&pagesize=${this.props.page_size}`
       let data=await fetch(url)
       if(data.status===429){
         this.setState.article=null
+        alert("API NOT WORKING - LIMIT REACHED")
       }
       else{
+        // console.log("sagar");
+        this.props.setState(70);
         let  res =await data.json();
-        // console.log(res);
+        this.props.setState(100);
         this.setState( {article :res.articles,totalpage:res.totalResults,loading:false})
       }  
     }
-    pre= async ()=>{
-      if(this.state.page>1){
-        this.setState({loading : true})
-        let url=`https://newsapi.org/v2/top-headlines?country=${this.props.country}&apiKey=b6ad3649af274729b4c7e2a2308183c6&page=${this.state.page-1}&pagesize=${this.props.page_size}`
-        let data=await fetch(url)
-        if(data.status===429){
-          this.setState.article=null
-          console.log("no pre");
-        }
-        else{
-          let  res =await data.json();
-          console.log(res.articles);
-          this.setState( {article :res.articles
-            ,page:this.state.page-1,loading:false} )
-            console.log("pre");
-          }
-    }
-    else{
-      alert("No Previous Page Available")
-    }
-  }
-  next= async ()=>{
-    if(this.state.page<Math.floor(this.state.totalpage/15)){
-      this.setState({loading : true})
-      let url=`https://newsapi.org/v2/top-headlines?country=${this.props.country}&apiKey=b6ad3649af274729b4c7e2a2308183c6&page=${this.state.page+1}&pagesize=${this.props.page_size}`
+    
+    
+    fetchMoreData = async () => {
+      let url=`https://newsapi.org/v2/top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=${this.props.apiKey}&page=${this.state.page+1}&pagesize=${this.props.page_size}`
       let data=await fetch(url)
       if(data.status===429){
         this.setState.article=null
-        console.log("no next");
+        alert("API NOT WORKING - LIMIT REACHED")
       }
       else{
         let  res =await data.json();
-        console.log(res);
-        this.setState( {article :res.articles,page:this.state.page+1,loading:false})
-        console.log("next");
-      }
-    }
-    else{
-      alert("No Next Page Available")
-    }
-  }
-
+        this.setState( {article :this.state.article.concat(res.articles),totalpage:res.totalResults,page:this.state.page+1})
+        // console.log(this.state.article);
+      }  
+    };
 
   render() {
     return (
       <>
+          <InfiniteScroll
+          dataLength={this.state.article.length}
+          next={this.fetchMoreData}
+          hasMore={this.state.article.length<this.state.totalpage}
+          loader={<Loading/>}
+          >
         <div className="container my-3">
             <h1 style={{textAlign:'center'}}>Want To Know the World...</h1>
           {this.state.loading && <Loading/>}
           <div className="row my-3">
-            {this.state.article===null?[]:(!this.state.loading && this.state.article.map((e)=>{
-              console.log("")
+            {this.state.article===null?[]:(this.state.article.map((e)=>{
+              // console.log("")
                 return(
                     <div className="col-md-4 my-2">
-                <NewsItem title={e.title?e.title:""} des={e.description?e.description:""} img={e.urlToImage===null?"https://news.mit.edu/sites/default/files/styles/news_article__image_gallery/public/images/202302/w3c.jpg?itok=XgSzupmJ":e.urlToImage} read={e.url} />
+                <NewsItem title={e.title?e.title:""} des={e.description?e.description:""} img={e.urlToImage===null?"https://news.mit.edu/sites/default/files/styles/news_article__image_gallery/public/images/202302/w3c.jpg?itok=XgSzupmJ":e.urlToImage} read={e.url} author={e.author?e.author:"Unknown"} date={e.publishedAt} src={e.source.name}/>
               </div>
                 )
             }))}
               </div>
-            <div className="container d-flex justify-content-between">
-
-            <button type="button" onClick={this.pre} className="btn btn-dark">Preview&#x2190;</button>
-            <button type="button" onClick={this.next} className="btn btn-dark">Next&#x2192;</button>
-            </div>
-
         </div>
+              </InfiniteScroll>
       </>
     );
   }
